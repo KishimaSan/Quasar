@@ -30,7 +30,7 @@ const loc = {
 
 const monthsList = ['Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь', 'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь'];
 
-// --- УПРАВЛЕНИЕ МОБИЛЬНЫМ МЕНЮ (ФИКС) ---
+// --- УПРАВЛЕНИЕ МОБИЛЬНЫМ МЕНЮ ---
 document.addEventListener('DOMContentLoaded', () => {
   const sidebar = document.getElementById('sidebar');
   const btnOpen = document.getElementById('open-sidebar');
@@ -61,7 +61,6 @@ document.addEventListener('DOMContentLoaded', () => {
   });
   observer.observe(sidebar, { childList: true, subtree: true });
 });
-
 
 function populateDateSelects() {
   const daySelect = document.getElementById('birth-day');
@@ -545,7 +544,13 @@ function openFullscreenImage(src) {
   const img = document.getElementById('fullscreen-image');
   img.src = src;
   modal.style.display = 'flex';
+  document.body.style.overflow = 'hidden'; // Блокируем прокрутку фона
 }
+
+document.getElementById('btn-close-image').onclick = () => {
+  document.getElementById('modal-image-view').style.display = 'none';
+  document.body.style.overflow = ''; // Возвращаем прокрутку
+};
 
 const contextMenu = document.getElementById('context-menu');
 const ctxCopy = document.getElementById('ctx-copy');

@@ -421,6 +421,37 @@ body.theme-classic.bg-white .custom-select option { background: #ffffff; color: 
   .msg { max-width: 85%; }
   .modal-content { width: 95% !important; padding: 20px !important; }
   .profile-modal-large { width: 95% !important; }
+  
+  /* Скрываем текст названия файла в превью на телефоне */
+  #preview-file-info {
+    display: none !important;
+  }
+
+  /* Превью-бокс делаем аккуратным и не даем ему вылезать за экран */
+  .preview-box {
+    max-width: 90vw;
+    padding: 6px;
+    gap: 0;
+  }
+
+  #preview-img {
+    max-width: 120px;
+    max-height: 120px;
+    border-radius: 8px;
+  }
+
+  /* Кнопка отправки на телефоне становится чуть меньше, чтобы влезала */
+  #send-btn {
+    width: 45px;
+    height: 45px;
+    font-size: 18px;
+  }
+
+  /* Убираем лишние отступы у поля ввода */
+  #input-area {
+    gap: 8px;
+    padding: 10px;
+  }
 }
 
 /* Контекстное меню */
