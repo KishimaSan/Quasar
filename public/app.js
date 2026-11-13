@@ -21,6 +21,8 @@ let isDragging = false;
 let startX = 0;
 let startY = 0;
 let minScale = 1;
+let touchStartX = 0;
+let touchStartY = 0;
 
 const loc = {
   dark: { dev: '[ДЬЯВОЛ]', apostle: '[АПОСТОЛ]', imp: 'ЧЕРТЯТА', online: 'В СЕТИ', sub: 'Демонический мессенджер' },
@@ -869,9 +871,32 @@ function drawCrop() {
 
 zoomSlider.oninput = (e) => { cropScale = parseFloat(e.target.value); drawCrop(); };
 let cropContainer = document.querySelector('.crop-container');
+
+// Для мышки
 cropContainer.addEventListener('mousedown', (e) => { isDragging = true; startX = e.clientX - cropX; startY = e.clientY - cropY; });
 window.addEventListener('mousemove', (e) => { if (!isDragging) return; cropX = e.clientX - startX; cropY = e.clientY - startY; drawCrop(); });
 window.addEventListener('mouseup', () => { isDragging = false; });
+
+// Для пальцев
+cropContainer.addEventListener('touchstart', (e) => {
+  if (e.touches.length === 1) {
+    isDragging = true;
+    touchStartX = e.touches[0].clientX - cropX;
+    touchStartY = e.touches[0].clientY - cropY;
+  }
+}, { passive: false });
+
+cropContainer.addEventListener('touchmove', (e) => {
+  if (!isDragging || e.touches.length !== 1) return;
+  e.preventDefault(); // Запрещаем прокрутку страницы во время движения картинки
+  cropX = e.touches[0].clientX - touchStartX;
+  cropY = e.touches[0].clientY - touchStartY;
+  drawCrop();
+}, { passive: false });
+
+cropContainer.addEventListener('touchend', () => {
+  isDragging = false;
+});
 document.getElementById('btn-crop-cancel').onclick = () => { modalCrop.style.display = 'none'; modal.style.display = 'flex'; };
 
 document.getElementById('btn-crop-save').onclick = () => {
