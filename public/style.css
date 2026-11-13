@@ -339,10 +339,9 @@ body.theme-classic.bg-white .custom-select option { background: #ffffff; color: 
 @media (max-width: 768px) {
   .mobile-only { display: block; }
   
-  /* Фиксируем высоту экрана для всего приложения */
   #app-screen {
     height: 100vh;
-    height: 100dvh; /* Динамическая высота для мобильных браузеров */
+    height: 100dvh;
     overflow: hidden;
   }
 
@@ -352,7 +351,6 @@ body.theme-classic.bg-white .custom-select option { background: #ffffff; color: 
     flex-direction: column;
   }
 
-  /* Прячем сайдбар и ОТКЛЮЧАЕМ клики, когда он скрыт */
   #sidebar {
     position: fixed;
     top: 0;
@@ -384,14 +382,13 @@ body.theme-classic.bg-white .custom-select option { background: #ffffff; color: 
     z-index: 1000;
   }
 
-  /* Шапка чата на телефоне */
   #chat-header {
     padding: 10px 15px;
     flex-direction: row;
     align-items: center;
     justify-content: flex-start;
     gap: 15px;
-    flex-shrink: 0; /* Запрещаем шапке сжиматься */
+    flex-shrink: 0;
   }
   
   #open-sidebar {
@@ -403,55 +400,28 @@ body.theme-classic.bg-white .custom-select option { background: #ffffff; color: 
     padding: 0;
   }
 
-  /* Область сообщений занимает всё свободное место */
   #messages {
     flex: 1;
     padding: 15px;
     overflow-y: auto;
   }
 
-  /* Поле ввода всегда прижато к низу */
   #input-area {
     padding: 10px 15px;
     background: var(--bg-panel);
-    flex-shrink: 0; /* Запрещаем сжиматься */
-    padding-bottom: env(safe-area-inset-bottom, 10px); /* Отступ для iPhone */
+    flex-shrink: 0;
+    padding-bottom: env(safe-area-inset-bottom, 10px);
   }
 
   .msg { max-width: 85%; }
   .modal-content { width: 95% !important; padding: 20px !important; }
   .profile-modal-large { width: 95% !important; }
   
-  /* Скрываем текст названия файла в превью на телефоне */
-  #preview-file-info {
-    display: none !important;
-  }
-
-  /* Превью-бокс делаем аккуратным и не даем ему вылезать за экран */
-  .preview-box {
-    max-width: 90vw;
-    padding: 6px;
-    gap: 0;
-  }
-
-  #preview-img {
-    max-width: 120px;
-    max-height: 120px;
-    border-radius: 8px;
-  }
-
-  /* Кнопка отправки на телефоне становится чуть меньше, чтобы влезала */
-  #send-btn {
-    width: 45px;
-    height: 45px;
-    font-size: 18px;
-  }
-
-  /* Убираем лишние отступы у поля ввода */
-  #input-area {
-    gap: 8px;
-    padding: 10px;
-  }
+  #preview-file-info { display: none !important; }
+  .preview-box { max-width: 90vw; padding: 6px; gap: 0; }
+  #preview-img { max-width: 120px; max-height: 120px; border-radius: 8px; }
+  #send-btn { width: 45px; height: 45px; font-size: 18px; }
+  #input-area { gap: 8px; padding: 10px; }
 }
 
 /* Контекстное меню */
@@ -535,3 +505,26 @@ body.theme-classic.bg-white .custom-select option { background: #ffffff; color: 
   border: 1px solid rgba(255,255,255,0.05);
 }
 #console-logs-list div span { opacity: 1; }
+
+/* Непрочитанные сообщения */
+.unread-badge {
+  background: #f43f5e;
+  color: white;
+  font-size: 11px;
+  font-weight: bold;
+  padding: 2px 6px;
+  border-radius: 10px;
+  margin-left: auto;
+  min-width: 18px;
+  text-align: center;
+  box-shadow: 0 0 8px rgba(244, 63, 94, 0.6);
+}
+
+.read-status {
+  font-size: 12px;
+  color: #10b981;
+  margin-left: 5px;
+}
+.read-status.unread {
+  color: var(--text-muted);
+}

@@ -11,6 +11,7 @@ let replyToMsg = null;
 let activeContextMsg = null; 
 let currentPins = []; 
 let currentPinIndex = 0; 
+let unreadMessages = {}; // Объект непрочитанных сообщений
 
 let cropImage = new Image();
 let cropCtx = null;
@@ -255,7 +256,13 @@ async function refreshUsers() {
         if (u.role === 'dev') roleBadge = `<span class="badge-dev" style="margin-left: 5px;">${getRoleName('dev', currentUser.theme)}</span>`;
         if (u.role === 'apostle') roleBadge = `<span class="badge-apostle" style="margin-left: 5px;">${getRoleName('apostle', currentUser.theme)}</span>`;
         const statusHtml = u.isBanned ? '<span style="color:#f43f5e;font-size:10px;margin-left:5px;">(ИЗГНАН)</span>' : '';
-        li.innerHTML = `${avatarHtml} ${u.username} ${roleBadge} ${statusHtml} <span class="dot"></span>`;
+        
+        let unreadHtml = '';
+        if (unreadMessages[u.username] > 0) {
+          unreadHtml = `<span class="unread-badge">${unreadMessages[u.username]}</span>`;
+        }
+        
+        li.innerHTML = `${avatarHtml} ${u.username} ${roleBadge} ${statusHtml} ${unreadHtml} <span class="dot"></span>`;
         li.title = u.lastSeen ? getSeenText(u.lastSeen, u.gender) : 'Неизвестно';
         li.onclick = () => openChat(u);
         if (u.role === 'dev' || u.role === 'apostle') { powerList.appendChild(li); } else { allList.appendChild(li); }
@@ -296,7 +303,13 @@ socket.on('users_online', (online) => {
     const li = document.createElement('li');
     li.className = 'online';
     li.dataset.user = u;
-    li.innerHTML = `<span class="dot" style="margin-left:0;margin-right:8px;"></span> ${u}`;
+    
+    let unreadHtml = '';
+    if (unreadMessages[u] > 0) {
+      unreadHtml = `<span class="unread-badge">${unreadMessages[u]}</span>`;
+    }
+    
+    li.innerHTML = `<span class="dot" style="margin-left:0;margin-right:8px;"></span> ${u} ${unreadHtml}`;
     li.onclick = async () => {
       const r = await fetch('/api/users');
       const users = await r.json();
@@ -327,6 +340,15 @@ socket.on('pins_updated', () => {
       currentPins.sort((a, b) => a.time - b.time);
       if (currentPins.length > 0) { currentPinIndex = currentPins.length - 1; } else { currentPinIndex = 0; }
       updatePinnedBar();
+    });
+  }
+});
+
+socket.on('messages_read', ({ by }) => {
+  if (currentChat === by) {
+    document.querySelectorAll('.msg.mine .read-status').forEach(el => {
+      el.textContent = '✓✓';
+      el.classList.remove('unread');
     });
   }
 });
@@ -419,6 +441,12 @@ function openChat(userData, isOnline = false) {
     currentPins = data.pins || [];
     currentPins.sort((a, b) => a.time - b.time);
     if (currentPins.length > 0) { currentPinIndex = currentPins.length - 1; updatePinnedBar(); }
+    
+    if (data.unreadCount > 0) {
+      socket.emit('mark_read', { from: currentUser.username, to: userData.username });
+      unreadMessages[userData.username] = 0;
+      refreshUsers();
+    }
   });
 }
 
@@ -512,7 +540,16 @@ function renderMessage(m) {
   }
 
   const d = new Date(m.time);
-  html += `<span class="time">${d.getHours()}:${String(d.getMinutes()).padStart(2,'0')}</span>`;
+  const timeStr = `${d.getHours()}:${String(d.getMinutes()).padStart(2,'0')}`;
+  
+  if (m.from === currentUser.username) {
+    const checkClass = m.isRead ? 'read-status' : 'read-status unread';
+    const checkIcon = m.isRead ? '✓✓' : '✓';
+    html += `<span class="time">${timeStr} <span class="${checkClass}">${checkIcon}</span></span>`;
+  } else {
+    html += `<span class="time">${timeStr}</span>`;
+  }
+  
   div.innerHTML = html;
   div.msgData = m;
   
@@ -546,12 +583,12 @@ function openFullscreenImage(src) {
   const img = document.getElementById('fullscreen-image');
   img.src = src;
   modal.style.display = 'flex';
-  document.body.style.overflow = 'hidden'; // Блокируем прокрутку фона
+  document.body.style.overflow = 'hidden';
 }
 
 document.getElementById('btn-close-image').onclick = () => {
   document.getElementById('modal-image-view').style.display = 'none';
-  document.body.style.overflow = ''; // Возвращаем прокрутку
+  document.body.style.overflow = '';
 };
 
 const contextMenu = document.getElementById('context-menu');
@@ -686,8 +723,16 @@ ctxPin.onclick = async () => {
 };
 
 socket.on('new_message', (m) => {
-  if (!currentChat) return;
-  if ((m.from === currentUser.username && m.to === currentChat) || (m.from === currentChat && m.to === currentUser.username)) { renderMessage(m); }
+  if (currentChat === m.from && m.to === currentUser.username) {
+    renderMessage(m);
+    socket.emit('mark_read', { from: currentUser.username, to: m.from });
+    return;
+  }
+
+  if (m.to === currentUser.username && m.from !== currentUser.username) {
+    unreadMessages[m.from] = (unreadMessages[m.from] || 0) + 1;
+    refreshUsers();
+  }
 });
 
 socket.on('banned', () => { alert('Вы были изгнаны (забанены).'); localStorage.removeItem('quasar_user'); location.reload(); });
@@ -870,6 +915,7 @@ function drawCrop() {
 }
 
 zoomSlider.oninput = (e) => { cropScale = parseFloat(e.target.value); drawCrop(); };
+
 let cropContainer = document.querySelector('.crop-container');
 
 // Для мышки
@@ -888,7 +934,7 @@ cropContainer.addEventListener('touchstart', (e) => {
 
 cropContainer.addEventListener('touchmove', (e) => {
   if (!isDragging || e.touches.length !== 1) return;
-  e.preventDefault(); // Запрещаем прокрутку страницы во время движения картинки
+  e.preventDefault();
   cropX = e.touches[0].clientX - touchStartX;
   cropY = e.touches[0].clientY - touchStartY;
   drawCrop();
@@ -897,6 +943,7 @@ cropContainer.addEventListener('touchmove', (e) => {
 cropContainer.addEventListener('touchend', () => {
   isDragging = false;
 });
+
 document.getElementById('btn-crop-cancel').onclick = () => { modalCrop.style.display = 'none'; modal.style.display = 'flex'; };
 
 document.getElementById('btn-crop-save').onclick = () => {

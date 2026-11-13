@@ -343,7 +343,7 @@ app.post('/api/forward-message', (req, res) => {
   
   const newMsg = {
     id: Date.now() + '-' + Math.random().toString(36).slice(2),
-    time: Date.now(), from, to, text, file, fileName, forwardedFrom
+    time: Date.now(), from, to, text, file, fileName, forwardedFrom, isRead: false
   };
   
   messages.push(newMsg);
@@ -411,9 +411,28 @@ io.on('connection', (socket) => {
     }
   });
 
+  socket.on('mark_read', ({ from, to }) => {
+    const messages = loadJSON(MSGS_FILE, []);
+    let changed = false;
+    
+    messages.forEach(m => {
+      if (m.from === to && m.to === from && !m.isRead) {
+        m.isRead = true;
+        changed = true;
+      }
+    });
+    
+    if (changed) {
+      saveJSON(MSGS_FILE, messages);
+      for (const s of io.sockets.sockets.values()) {
+        if (s.username === to) s.emit('messages_read', { by: from });
+      }
+    }
+  });
+
   socket.on('send_message', (msg) => {
     const messages = loadJSON(MSGS_FILE, []);
-    const full = { ...msg, id: Date.now() + '-' + Math.random().toString(36).slice(2), time: Date.now() };
+    const full = { ...msg, id: Date.now() + '-' + Math.random().toString(36).slice(2), time: Date.now(), isRead: false };
     messages.push(full);
     saveJSON(MSGS_FILE, messages);
 
@@ -436,7 +455,8 @@ io.on('connection', (socket) => {
       (!m.deletedFor || !m.deletedFor.includes(user1))
     );
     const pins = filtered.filter(m => m.isPinned);
-    cb({ messages: filtered, pins: pins });
+    const unreadCount = filtered.filter(m => m.to === user1 && !m.isRead).length;
+    cb({ messages: filtered, pins: pins, unreadCount: unreadCount });
   });
 
   socket.on('disconnect', () => {
