@@ -11,7 +11,7 @@ let replyToMsg = null;
 let activeContextMsg = null; 
 let currentPins = []; 
 let currentPinIndex = 0; 
-let unreadMessages = {}; // Объект непрочитанных сообщений
+let unreadMessages = {}; 
 
 let cropImage = new Image();
 let cropCtx = null;
@@ -52,7 +52,6 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // Закрываем меню при клике на пользователя
   const observer = new MutationObserver(() => {
     document.querySelectorAll('#sidebar li').forEach(li => {
       li.addEventListener('click', () => {
@@ -229,6 +228,7 @@ function updateMyAvatar(url) {
 document.getElementById('logout').onclick = () => { localStorage.removeItem('quasar_user'); location.reload(); };
 document.getElementById('btn-profile-logout').onclick = () => { localStorage.removeItem('quasar_user'); location.reload(); };
 
+// --- ОБНОВЛЕНИЕ СПИСКОВ ---
 async function refreshUsers() {
   try {
     const r = await fetch('/api/users');
@@ -258,9 +258,7 @@ async function refreshUsers() {
         const statusHtml = u.isBanned ? '<span style="color:#f43f5e;font-size:10px;margin-left:5px;">(ИЗГНАН)</span>' : '';
         
         let unreadHtml = '';
-        if (unreadMessages[u.username] > 0) {
-          unreadHtml = `<span class="unread-badge">${unreadMessages[u.username]}</span>`;
-        }
+        if (unreadMessages[u.username] > 0) unreadHtml = `<span class="unread-badge">${unreadMessages[u.username]}</span>`;
         
         li.innerHTML = `${avatarHtml} ${u.username} ${roleBadge} ${statusHtml} ${unreadHtml} <span class="dot"></span>`;
         li.title = u.lastSeen ? getSeenText(u.lastSeen, u.gender) : 'Неизвестно';
@@ -278,6 +276,33 @@ async function refreshUsers() {
     document.getElementById('all-list-title').style.display = allList.children.length > 0 ? 'block' : 'none';
   } catch (error) { console.error(error); }
 }
+
+function renderOnlineList() {
+  const list = document.getElementById('online-list');
+  const onlineTitle = document.getElementById('online-title');
+  list.innerHTML = '';
+  const filteredOnline = onlineUsersList.filter(u => u !== currentUser.username);
+  onlineTitle.style.display = filteredOnline.length > 0 ? 'block' : 'none';
+
+  filteredOnline.forEach(u => {
+    const li = document.createElement('li');
+    li.className = 'online';
+    li.dataset.user = u;
+    
+    let unreadHtml = '';
+    if (unreadMessages[u] > 0) unreadHtml = `<span class="unread-badge">${unreadMessages[u]}</span>`;
+    
+    li.innerHTML = `<span class="dot" style="margin-left:0;margin-right:8px;"></span> ${u} ${unreadHtml}`;
+    li.onclick = async () => {
+      const r = await fetch('/api/users');
+      const users = await r.json();
+      const userData = users.find(x => x.username === u);
+      if (userData) openChat(userData, true); else openChat({ username: u }, true);
+    };
+    list.appendChild(li);
+  });
+}
+
 setInterval(refreshUsers, 5000);
 
 socket.on('force_reload', () => { setTimeout(() => { location.reload(); }, 500); });
@@ -293,31 +318,7 @@ socket.on('your_role_changed', (newRole) => {
 
 socket.on('users_online', (online) => {
   onlineUsersList = online; 
-  const list = document.getElementById('online-list');
-  const onlineTitle = document.getElementById('online-title');
-  list.innerHTML = '';
-  const filteredOnline = online.filter(u => u !== currentUser.username);
-  onlineTitle.style.display = filteredOnline.length > 0 ? 'block' : 'none';
-
-  filteredOnline.forEach(u => {
-    const li = document.createElement('li');
-    li.className = 'online';
-    li.dataset.user = u;
-    
-    let unreadHtml = '';
-    if (unreadMessages[u] > 0) {
-      unreadHtml = `<span class="unread-badge">${unreadMessages[u]}</span>`;
-    }
-    
-    li.innerHTML = `<span class="dot" style="margin-left:0;margin-right:8px;"></span> ${u} ${unreadHtml}`;
-    li.onclick = async () => {
-      const r = await fetch('/api/users');
-      const users = await r.json();
-      const userData = users.find(x => x.username === u);
-      if (userData) openChat(userData, true); else openChat({ username: u }, true);
-    };
-    list.appendChild(li);
-  });
+  renderOnlineList();
   refreshUsers(); 
 });
 
@@ -445,7 +446,8 @@ function openChat(userData, isOnline = false) {
     if (data.unreadCount > 0) {
       socket.emit('mark_read', { from: currentUser.username, to: userData.username });
       unreadMessages[userData.username] = 0;
-      refreshUsers();
+      renderOnlineList(); // Обновляем онлайн-список
+      refreshUsers();     // Обновляем общий список
     }
   });
 }
@@ -545,7 +547,7 @@ function renderMessage(m) {
   if (m.from === currentUser.username) {
     const checkClass = m.isRead ? 'read-status' : 'read-status unread';
     const checkIcon = m.isRead ? '✓✓' : '✓';
-    html += `<span class="time">${timeStr} <span class="${checkClass}">${checkIcon}</span></span>`;
+    html += `<span class="time">${timeStr} <span class="${checkClass}" style="letter-spacing: -3px;">${checkIcon}</span></span>`;
   } else {
     html += `<span class="time">${timeStr}</span>`;
   }
@@ -722,15 +724,25 @@ ctxPin.onclick = async () => {
   }
 };
 
+// --- ИСПРАВЛЕННЫЙ ОБРАБОТЧИК НОВЫХ СООБЩЕНИЙ ---
 socket.on('new_message', (m) => {
-  if (currentChat === m.from && m.to === currentUser.username) {
+  // Если сообщение от меня, и чат открыт - отрисовываем
+  if (m.from === currentUser.username && m.to === currentChat) {
+    renderMessage(m);
+    return;
+  }
+  
+  // Если сообщение пришло мне от того, с кем я общаюсь - отрисовываем и помечаем прочитанным
+  if (m.to === currentUser.username && m.from === currentChat) {
     renderMessage(m);
     socket.emit('mark_read', { from: currentUser.username, to: m.from });
     return;
   }
 
+  // Если сообщение пришло мне, но я в другом чате - показываем счетчик
   if (m.to === currentUser.username && m.from !== currentUser.username) {
     unreadMessages[m.from] = (unreadMessages[m.from] || 0) + 1;
+    renderOnlineList();
     refreshUsers();
   }
 });
@@ -824,6 +836,10 @@ function sendMessage() {
   document.getElementById('preview-img').style.display = 'none';
   socket.emit('typing', { to: currentChat, isTyping: false });
   clearTimeout(typingTimeout);
+  
+  if (window.innerWidth <= 768) {
+    msgInput.blur();
+  }
 }
 
 const modal = document.getElementById('modal-settings');
@@ -918,12 +934,10 @@ zoomSlider.oninput = (e) => { cropScale = parseFloat(e.target.value); drawCrop()
 
 let cropContainer = document.querySelector('.crop-container');
 
-// Для мышки
 cropContainer.addEventListener('mousedown', (e) => { isDragging = true; startX = e.clientX - cropX; startY = e.clientY - cropY; });
 window.addEventListener('mousemove', (e) => { if (!isDragging) return; cropX = e.clientX - startX; cropY = e.clientY - startY; drawCrop(); });
 window.addEventListener('mouseup', () => { isDragging = false; });
 
-// Для пальцев
 cropContainer.addEventListener('touchstart', (e) => {
   if (e.touches.length === 1) {
     isDragging = true;
@@ -1136,7 +1150,6 @@ async function loadConsoleData() {
       list.appendChild(card);
     });
     
-    // Обработчики удаления
     document.querySelectorAll('.del-report-btn').forEach(btn => {
       btn.onclick = async () => {
         const repId = btn.getAttribute('data-id');
