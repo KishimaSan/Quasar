@@ -30,6 +30,39 @@ const loc = {
 
 const monthsList = ['Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь', 'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь'];
 
+// --- УПРАВЛЕНИЕ МОБИЛЬНЫМ МЕНЮ (ФИКС) ---
+document.addEventListener('DOMContentLoaded', () => {
+  const sidebar = document.getElementById('sidebar');
+  const btnOpen = document.getElementById('open-sidebar');
+  const btnClose = document.getElementById('close-sidebar');
+
+  if (btnOpen) {
+    btnOpen.addEventListener('click', (e) => {
+      e.preventDefault();
+      sidebar.classList.add('open');
+    });
+  }
+  if (btnClose) {
+    btnClose.addEventListener('click', (e) => {
+      e.preventDefault();
+      sidebar.classList.remove('open');
+    });
+  }
+
+  // Закрываем меню при клике на пользователя
+  const observer = new MutationObserver(() => {
+    document.querySelectorAll('#sidebar li').forEach(li => {
+      li.addEventListener('click', () => {
+        if (window.innerWidth <= 768) {
+          sidebar.classList.remove('open');
+        }
+      });
+    });
+  });
+  observer.observe(sidebar, { childList: true, subtree: true });
+});
+
+
 function populateDateSelects() {
   const daySelect = document.getElementById('birth-day');
   const monthSelect = document.getElementById('birth-month');
