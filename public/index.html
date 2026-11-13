@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Квазар</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#060913">
+</head>
+<body class="theme-dark bg-dark">
+
+<div id="auth-screen">
+  <div class="glow-card">
+    <h1>КВАЗ<span>АР</span></h1>
+    <p class="subtitle" id="subtitle-text">Демонический мессенджер</p>
+    
+    <div class="tabs">
+      <button class="tab active" data-tab="login">Вход</button>
+      <button class="tab" data-tab="register">Регистрация</button>
+    </div>
+    
+    <input id="auth-user" placeholder="Имя" autocomplete="username">
+    
+    <div class="password-wrapper">
+      <input id="auth-pass" type="password" placeholder="Пароль" autocomplete="current-password">
+      <button type="button" class="toggle-pass" onclick="togglePassword('auth-pass', this)">👁️</button>
+    </div>
+    
+    <button id="auth-btn" class="primary">ВОЙТИ</button>
+    <div id="auth-err" class="err"></div>
+  </div>
+</div>
+
+<div id="app-screen" style="display:none">
+  <aside id="sidebar">
+    <button id="close-sidebar" class="mobile-only">✖</button>
+    <div class="brand">КВАЗАР</div>
+    
+    <div class="me">
+      <img id="my-avatar" src="" style="display:none" draggable="false">
+      <div class="me-info">
+        <b id="me-name"></b> <span id="my-role-badge" style="display:none;"></span>
+      </div>
+      <button id="btn-settings" title="Настройки">⚙️</button>
+    </div>
+    
+    <div class="section-title" id="online-title">В СЕТИ</div>
+    <ul id="online-list"></ul>
+    
+    <div class="section-title" id="power-list-title">ВЛАСТЬ</div>
+    <ul id="power-list"></ul>
+    
+    <div class="section-title" id="all-list-title">ЧЕРТЯТА</div>
+    <ul id="all-list"></ul>
+    
+    <button id="logout" class="ghost">Выйти</button>
+  </aside>
+
+  <main id="chat">
+    <header id="chat-header">
+      <button id="open-sidebar" class="mobile-only">☰</button>
+      <div class="header-main" id="chat-header-clickable" style="cursor: pointer;">
+        <img id="chat-avatar" src="" style="display:none" draggable="false">
+        <div class="header-info">
+          <span id="chat-title">Выберите собеседника</span>
+          <span id="chat-status" style="display:none; font-size: 12px; color: var(--text-muted); font-weight: normal;"></span>
+        </div>
+      </div>
+      <div id="typing-indicator" style="display:none;">печатает...</div>
+    </header>
+
+    <!-- ПАНЕЛЬ ЗАКРЕПОВ -->
+    <div id="pinned-bar" style="display:none; background: rgba(0,0,0,0.4); border-bottom: 1px solid var(--border); padding: 10px 24px; align-items: center; justify-content: space-between; z-index: 14; backdrop-filter: blur(10px); cursor: pointer;">
+      <div style="display: flex; align-items: center; gap: 15px; overflow: hidden; flex: 1;">
+        <span style="color: var(--primary); font-size: 18px;">📌</span>
+        <span id="pinned-text" style="font-size: 14px; color: var(--text-main); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;"></span>
+      </div>
+      <div style="display: flex; align-items: center; gap: 10px; margin-left: 15px;">
+        <button id="btn-open-pin-list" style="background: transparent; border: 1px solid var(--border); color: var(--text-muted); border-radius: 6px; padding: 4px 8px; font-size: 12px; cursor: pointer; transition: 0.2s;">Все закрепы</button>
+      </div>
+    </div>
+    
+    <div id="messages"></div>
+    
+    <div id="file-preview" style="display:none">
+      <div class="preview-box">
+        <img id="preview-img" src="" alt="Превью" style="display:none;" draggable="false">
+        <div id="preview-file-info"><span id="preview-name"></span></div>
+        <button id="cancel-file" title="Удалить">✖</button>
+      </div>
+    </div>
+
+    <div id="reply-panel" style="display:none; padding: 10px 24px; background: rgba(0,0,0,0.3); border-top: 1px solid var(--border); align-items: center; justify-content: space-between;">
+      <div style="font-size: 13px; border-left: 3px solid var(--primary); padding-left: 10px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; width: 90%;">
+        <span style="color: var(--primary); font-weight: bold; display: block;">Ответ на сообщение:</span>
+        <span id="reply-text" style="color: var(--text-muted);"></span>
+      </div>
+      <button id="cancel-reply" style="background: transparent; border: none; color: #f43f5e; cursor: pointer; font-size: 18px;">✖</button>
+    </div>
+
+    <div id="input-area" style="display:none">
+      <label class="file-btn" title="Прикрепить файл">📎<input type="file" id="file-input" hidden></label>
+      <input id="msg-input" placeholder="Напишите сообщение...">
+      <button id="send-btn" class="primary">➤</button>
+    </div>
+  </main>
+</div>
+
+<!-- МОДАЛЬНОЕ ОКНО НАСТРОЕК -->
+<div id="modal-settings" class="modal" style="display:none">
+  <div class="modal-content profile-modal-large">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px;">
+      <h2 style="margin: 0;">Мой профиль</h2>
+      <div style="display: flex; gap: 10px;">
+        <button id="btn-dev-console" class="ghost" style="display:none; margin: 0; padding: 6px 12px; font-size: 12px; border-color: #a78bfa; color: #a78bfa;">🛠 Консоль</button>
+        <button id="btn-profile-logout" class="ghost" style="margin: 0; padding: 6px 12px; font-size: 12px; border-color: #f43f5e; color: #f43f5e;">ВЫЙТИ</button>
+      </div>
+    </div>
+    
+    <div class="avatar-upload">
+      <img id="settings-avatar-preview" src="" alt="Аватар" style="display:none; width: 180px; height: 180px;" draggable="false">
+      <label class="btn-upload" style="margin-top: 10px;">Загрузить аватар<input type="file" id="avatar-input" hidden accept="image/*"></label>
+    </div>
+
+    <div class="settings-inputs">
+      <div style="margin-bottom: 20px; background: rgba(0,0,0,0.2); padding: 15px; border-radius: 8px; border: 1px solid var(--border);">
+        <label class="input-label" style="font-size: 14px; margin-bottom: 10px; color: var(--primary);">ОФОРМЛЕНИЕ</label>
+        <div style="display: flex; gap: 10px; margin-bottom: 10px;">
+          <select id="theme-select" class="custom-select" style="width: 50%; padding: 10px;">
+            <option value="classic">Классический</option>
+            <option value="dark">Дьявольский</option>
+            <option value="cosmic">Космический</option>
+          </select>
+          <select id="bg-color-select" class="custom-select" style="width: 50%; padding: 10px;">
+            <option value="dark">Черный</option>
+            <option value="white">Белый</option>
+            <option value="gray">Серый</option>
+            <option value="blue">Синий</option>
+            <option value="green">Зеленый</option>
+            <option value="purple">Фиолетовый</option>
+          </select>
+        </div>
+      </div>
+
+      <label class="input-label" style="font-size: 14px;">Имя (никнейм)</label>
+      <input id="settings-username" placeholder="Введите новое имя..." style="font-size: 15px; padding: 14px;">
+
+      <div style="margin-top: 15px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 15px;">
+        <label class="input-label" style="font-size: 14px;">Дата рождения</label>
+        <div style="display: flex; gap: 10px; margin-bottom: 15px;">
+          <select id="birth-day" class="custom-select" style="width: 30%;"></select>
+          <select id="birth-month" class="custom-select" style="width: 40%;"></select>
+          <select id="birth-year" class="custom-select" style="width: 30%;"></select>
+        </div>
+
+        <label class="input-label" style="font-size: 14px;">Пол</label>
+        <select id="gender-select" class="custom-select" style="width: 100%; margin-bottom: 15px;">
+          <option value="">Не указан</option>
+          <option value="male">Мужской</option>
+          <option value="female">Женский</option>
+        </select>
+      </div>
+
+      <div id="about-group">
+        <label class="input-label" style="margin-top: 15px; font-size: 14px;">О себе</label>
+        <textarea id="settings-about" placeholder="Расскажите о себе..." style="width: 100%; background: rgba(0,0,0,0.3); border: 1px solid var(--border); color: var(--text-main); padding: 14px; border-radius: 8px; resize: none; height: 80px; outline: none; margin-bottom: 15px; font-family: inherit; font-size: 15px;"></textarea>
+      </div>
+
+      <div style="margin-top: 10px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 15px;">
+        <label class="input-label" style="font-size: 14px;">Смена пароля</label>
+        <div class="password-wrapper" style="margin-bottom: 10px;">
+          <input id="settings-old-pass" type="password" placeholder="Текущий пароль" style="font-size: 15px; padding: 14px; margin: 0;">
+          <button type="button" class="toggle-pass" onclick="togglePassword('settings-old-pass', this)">👁️</button>
+        </div>
+        <div class="password-wrapper">
+          <input id="settings-new-pass" type="password" placeholder="Новый пароль (оставьте пустым, если не меняете)" style="font-size: 15px; padding: 14px; margin: 0;">
+          <button type="button" class="toggle-pass" onclick="togglePassword('settings-new-pass', this)">👁️</button>
+        </div>
+      </div>
+
+      <div id="admin-panel" style="display:none">
+        <hr style="border-color: rgba(255,255,255,0.1); margin: 20px 0;">
+        <h3 style="color: #f43f5e; font-size: 16px; margin-bottom: 12px;">Панель Власти</h3>
+        <select id="ban-select" class="custom-select" style="margin-bottom: 12px; padding: 12px; font-size: 14px;"></select>
+        
+        <div class="modal-actions" style="margin-bottom: 15px; flex-wrap: wrap;">
+          <button id="btn-ban" class="primary" style="background: #f43f5e; margin-top: 0; padding: 12px; flex: 1; min-width: 120px;">ЗАБАНИТЬ</button>
+          <button id="btn-delete-user" class="primary" style="background: #8b5cf6; margin-top: 0; padding: 12px; flex: 1; min-width: 120px;">УДАЛИТЬ ИЗ БЕЗДНЫ</button>
+          <button id="btn-make-apostle" class="primary" style="margin-top: 0; padding: 12px; flex: 1; display: none; min-width: 100%;">СДЕЛАТЬ АПОСТОЛОМ</button>
+        </div>
+      </div>
+    </div>
+
+    <hr style="border-color: rgba(255,255,255,0.1); margin: 20px 0;">
+    <button id="btn-delete-account" class="ghost" style="margin-top: 0; border-color: #f43f5e; color: #f43f5e; width: 100%; padding: 12px; font-size: 14px;">УДАЛИТЬ АККАУНТ</button>
+
+    <div class="modal-actions" style="margin-top: 30px;">
+      <button id="btn-close-settings" class="ghost" style="margin: 0; padding: 14px; flex: 1; font-size: 15px;">Назад</button>
+      <button id="btn-save-settings" class="primary" style="flex: 1; padding: 14px; font-size: 15px;">Сохранить</button>
+    </div>
+  </div>
+</div>
+
+<!-- МОДАЛЬНОЕ ОКНО РЕДАКТОРА АВАТАРКИ -->
+<div id="modal-crop" class="modal" style="display:none">
+  <div class="modal-content" style="width: 400px; text-align: center;">
+    <h2>Выбор области</h2>
+    <p style="font-size: 12px; color: #94a3b8; margin-bottom: 15px;">Двигайте фото мышкой и используйте ползунок</p>
+    <div class="crop-container" style="position: relative; width: 300px; height: 300px; margin: 0 auto 20px; background: #000; border-radius: 50%; overflow: hidden; cursor: move; border: 2px solid #38bdf8; box-shadow: 0 0 20px rgba(56, 189, 248, 0.3);">
+      <canvas id="crop-canvas" width="300" height="300"></canvas>
+    </div>
+    <input type="range" id="zoom-slider" min="1" max="4" step="0.05" value="1" style="width: 80%; margin-bottom: 20px;">
+    <div class="modal-actions">
+      <button id="btn-crop-cancel" class="ghost" style="margin: 0; flex: 1;">Назад</button>
+      <button id="btn-crop-save" class="primary" style="flex: 1;">Готово</button>
+    </div>
+  </div>
+</div>
+
+<!-- МОДАЛЬНОЕ ОКНО ПРОСМОТРА ПРОФИЛЯ -->
+<div id="modal-view-profile" class="modal" style="display:none">
+  <div class="modal-content profile-modal-large" style="text-align: center;">
+    <div class="view-profile-avatar-container">
+      <img id="view-avatar" src="" style="display:none" draggable="false">
+      <div id="view-avatar-placeholder" style="display:none; width:180px; height:180px; border-radius:50%; background:#334155; color:#fff; font-size:64px; line-height:180px; margin:0 auto 20px; border: 3px solid var(--primary); box-shadow: 0 0 20px rgba(56, 189, 248, 0.4);"></div>
+    </div>
+    <h2 id="view-username" style="margin-bottom: 8px; font-size: 28px;">Имя</h2>
+    <p id="view-role" style="font-size: 14px; margin-bottom: 5px; font-weight: bold;"></p>
+    <p id="view-status" style="color: #10b981; font-size: 14px; margin-bottom: 25px;">В сети</p>
+    <div id="view-about-container" style="text-align: left; background: rgba(0,0,0,0.3); padding: 20px; border-radius: 12px; margin-bottom: 30px; font-size: 15px; border: 1px solid var(--border);">
+      <span style="color: var(--text-muted); font-size: 12px; display: block; margin-bottom: 8px; letter-spacing: 1px;">О СЕБЕ</span>
+      <span id="view-about" style="color: #e0e7ff; line-height: 1.5;"></span>
+    </div>
+    <button id="btn-report-user" class="primary" style="background: #f43f5e; padding: 14px; font-size: 16px; margin-bottom: 10px;">ПОЖАЛОВАТЬСЯ НА ПОЛЬЗОВАТЕЛЯ</button>
+    <button id="btn-close-view-profile" class="primary" style="padding: 14px; font-size: 16px;">Закрыть</button>
+  </div>
+</div>
+
+<!-- МОДАЛЬНОЕ ОКНО ДЛЯ ПРОСМОТРА КАРТИНОК -->
+<div id="modal-image-view" class="modal" style="display:none; background: rgba(0,0,0,0.9); z-index: 2000;">
+  <img id="fullscreen-image" src="" style="max-width: 95vw; max-height: 95vh; object-fit: contain; border-radius: 8px; box-shadow: 0 0 30px rgba(0,0,0,0.8);">
+</div>
+
+<!-- МОДАЛЬНОЕ ОКНО ЖАЛОБЫ -->
+<div id="modal-report" class="modal" style="display:none">
+  <div class="modal-content" style="width: 450px;">
+    <h2>Пожаловаться</h2>
+    <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 15px;" id="report-target-text">Выберите причину:</p>
+    
+    <select id="report-reason" class="custom-select" style="width: 100%; padding: 12px; margin-bottom: 15px;">
+      <option value="spam">Спам / Реклама</option>
+      <option value="abuse">Оскорбления / Травля</option>
+      <option value="nsfw">Контент 18+</option>
+      <option value="other">Другое</option>
+    </select>
+
+    <div id="report-custom-group" style="display:none; margin-bottom: 15px;">
+      <textarea id="report-custom" placeholder="Опишите причину жалобы..." style="width: 100%; background: rgba(0,0,0,0.3); border: 1px solid var(--border); color: var(--text-main); padding: 12px; border-radius: 8px; resize: none; height: 80px; outline: none; font-family: inherit;"></textarea>
+    </div>
+
+    <div class="modal-actions" style="margin-top: 20px;">
+      <button id="btn-cancel-report" class="ghost" style="margin: 0; flex: 1;">Отмена</button>
+      <button id="btn-send-report" class="primary" style="flex: 1;">Отправить</button>
+    </div>
+  </div>
+</div>
+
+<!-- КОНТЕКСТНОЕ МЕНЮ СООБЩЕНИЯ -->
+<div id="context-menu" style="display:none; position:fixed; background: var(--bg-panel); border: 1px solid var(--border); border-radius: 10px; padding: 5px; z-index: 3000; min-width: 180px; box-shadow: 0 5px 20px rgba(0,0,0,0.5); backdrop-filter: blur(10px);">
+  <button class="ctx-btn" id="ctx-reply">↩️ Ответить</button>
+  <button class="ctx-btn" id="ctx-forward">➡️ Переслать</button>
+  <button class="ctx-btn" id="ctx-pin">📌 Закрепить</button>
+  <button class="ctx-btn" id="ctx-copy">📋 Копировать текст</button>
+  <button class="ctx-btn" id="ctx-report" style="color:#f43f5e;">⚠️ Пожаловаться</button>
+  <button class="ctx-btn" id="ctx-delete" style="color:#f43f5e; display:none;">🗑️ Удалить</button>
+</div>
+
+<!-- МИНИ-ОКНО ВЫБОРА УДАЛЕНИЯ -->
+<div id="delete-choice-modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:4000; justify-content:center; align-items:center;">
+  <div style="background:var(--bg-panel); border:1px solid var(--border); padding:20px; border-radius:12px; width:300px; text-align:center;">
+    <h3 style="margin-bottom:15px; font-size:16px;">Удалить сообщение?</h3>
+    <button id="btn-del-all" class="primary" style="background:#f43f5e; margin-bottom:10px;">Удалить у всех</button>
+    <button id="btn-del-me" class="ghost" style="width:100%; margin-bottom:10px;">Удалить только у себя</button>
+    <button id="btn-del-cancel" class="ghost" style="width:100%;">Отмена</button>
+  </div>
+</div>
+
+<!-- МОДАЛЬНОЕ ОКНО ПЕРЕСЫЛКИ -->
+<div id="modal-forward" class="modal" style="display:none">
+  <div class="modal-content" style="width: 350px;">
+    <h2>Переслать сообщение</h2>
+    <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 15px;">Кому отправить?</p>
+    <ul id="forward-users-list" style="list-style: none; max-height: 300px; overflow-y: auto; margin-bottom: 20px;"></ul>
+    <button id="btn-cancel-forward" class="ghost" style="width: 100%;">Отмена</button>
+  </div>
+</div>
+
+<!-- МОДАЛЬНОЕ ОКНО СПИСКА ЗАКРЕПОВ -->
+<div id="modal-pin-list" class="modal" style="display:none; z-index: 2500;">
+  <div class="modal-content" style="width: 450px;">
+    <h2>Закрепленные сообщения</h2>
+    <ul id="pin-list-ul" style="list-style: none; max-height: 400px; overflow-y: auto; margin-bottom: 20px;"></ul>
+    <button id="btn-close-pin-list" class="ghost" style="width: 100%;">Закрыть</button>
+  </div>
+</div>
+
+<!-- МОДАЛЬНОЕ ОКНО КОНСОЛИ РАЗРАБОТЧИКА -->
+<div id="modal-dev-console" class="modal" style="display:none; z-index: 3500;">
+  <div class="modal-content" style="width: 900px; max-width: 95vw; height: 85vh; display: flex; flex-direction: column;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+      <h2 style="margin: 0; color: #a78bfa;">🛠 Консоль Владыки</h2>
+      <button id="btn-close-console" class="ghost" style="margin: 0; padding: 6px 12px;">Закрыть</button>
+    </div>
+    
+    <div style="display: flex; gap: 15px; flex: 1; overflow: hidden;">
+      <!-- Лента жалоб -->
+      <div style="flex: 1; background: rgba(0,0,0,0.2); border-radius: 10px; padding: 15px; overflow-y: auto; display: flex; flex-direction: column;">
+        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); padding-bottom: 10px; margin-bottom: 10px;">
+          <h3 style="font-size: 16px; margin: 0;">Жалобы</h3>
+          <button id="btn-clear-reports" style="background: transparent; border: 1px solid #f43f5e; color: #f43f5e; font-size: 11px; padding: 3px 8px; border-radius: 4px; cursor: pointer;">Очистить всё</button>
+        </div>
+        <div id="console-reports-list" style="display: flex; flex-direction: column; gap: 10px;"></div>
+      </div>
+
+      <!-- Логи в реальном времени -->
+      <div style="flex: 1; background: rgba(0,0,0,0.3); border-radius: 10px; padding: 15px; overflow-y: auto; display: flex; flex-direction: column;">
+        <h3 style="font-size: 16px; margin-bottom: 10px; border-bottom: 1px solid var(--border); padding-bottom: 10px;">Логи</h3>
+        <div id="console-logs-list" style="display: flex; flex-direction: column; gap: 8px; font-family: monospace; font-size: 12px;"></div>
+      </div>
+      
+      <!-- Управление пользователями -->
+      <div style="flex: 1; background: rgba(0,0,0,0.2); border-radius: 10px; padding: 15px; overflow-y: auto;">
+        <h3 style="font-size: 16px; margin-bottom: 10px; border-bottom: 1px solid var(--border); padding-bottom: 10px;">Управление</h3>
+        <select id="console-user-select" class="custom-select" style="width: 100%; margin-bottom: 10px;"></select>
+        <button id="console-btn-ban" class="primary" style="background: #f43f5e; margin-bottom: 8px; padding: 10px;">ЗАБАНИТЬ</button>
+        <button id="console-btn-unban" class="primary" style="background: #10b981; padding: 10px;">РАЗБАНИТЬ</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="/socket.io/socket.io.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
