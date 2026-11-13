@@ -2,3 +2,5 @@ node_modules
 users.json
 messages.json
 reports.json
+public/uploads
+public/avatars
