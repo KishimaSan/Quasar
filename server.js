@@ -27,7 +27,7 @@ const loadJSON = (f, def) => { try { return JSON.parse(fs.readFileSync(f)); } ca
 const saveJSON = (f, d) => fs.writeFileSync(f, JSON.stringify(d, null, 2));
 
 let actionLogs = [];
-const disconnectTimers = {}; // Таймеры для отслеживания реального выхода
+const disconnectTimers = {}; 
 
 function addLog(action, details) {
   const logEntry = { time: Date.now(), action: action, details: details };
@@ -402,7 +402,9 @@ io.on('connection', (socket) => {
     const users = loadJSON(USERS_FILE, {});
     if (users[username]) { users[username].lastSeen = Date.now(); saveJSON(USERS_FILE, users); }
     
-    io.emit('users_online', [...io.sockets.sockets.values()].filter(s => s.username).map(s => s.username));
+    // Используем Set для уникальности имен
+    const uniqueOnline = [...new Set([...io.sockets.sockets.values()].filter(s => s.username).map(s => s.username))];
+    io.emit('users_online', uniqueOnline);
   });
 
   socket.on('typing', ({ to, isTyping }) => {
@@ -470,7 +472,10 @@ io.on('connection', (socket) => {
         if (users[username]) { users[username].lastSeen = Date.now(); saveJSON(USERS_FILE, users); }
         
         delete disconnectTimers[username];
-        io.emit('users_online', [...io.sockets.sockets.values()].filter(s => s.username).map(s => s.username));
+        
+        // Используем Set для уникальности имен
+        const uniqueOnline = [...new Set([...io.sockets.sockets.values()].filter(s => s.username).map(s => s.username))];
+        io.emit('users_online', uniqueOnline);
       }, 5000);
     }
   });
